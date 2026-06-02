@@ -26,30 +26,31 @@ jobs:
       with:
         ndk-version: r26b # Versão estável do NDK com suporte ao LLVM/Clang
 
+    - name: Injetar OpenSSL Estático (Vendored) no Manifesto
+      run: |
+        # Isso força o Cargo a unificar a dependência e baixar o código-fonte C do OpenSSL
+        cargo add openssl --features vendored
+
     - name: Compilar o Nushell Customizado
       run: |
-        # 1. Definir caminhos base do Android NDK
+        # 1. Caminhos base do Android NDK
         TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
         
-        # 2. Configurar os compiladores C/C++ corretos do NDK (Mirando API 24 do Android/Termux)
+        # 2. Compiladores C/C++ corretos do NDK (API 24 do Android/Termux)
         export CC_aarch64_linux_android=$TOOLCHAIN/bin/aarch64-linux-android24-clang
         export CXX_aarch64_linux_android=$TOOLCHAIN/bin/aarch64-linux-android24-clang++
         export CC=$TOOLCHAIN/bin/aarch64-linux-android24-clang
         export CXX=$TOOLCHAIN/bin/aarch64-linux-android24-clang++
         
-        # 3. Ensinar o Cargo a encontrar o Linker e o Arquivador
+        # 3. Linker e Arquivador para o Cargo e Crates -sys
         export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN/bin/aarch64-linux-android24-clang
         export AR_aarch64_linux_android=$TOOLCHAIN/bin/llvm-ar
         export AR=$TOOLCHAIN/bin/llvm-ar
         
-        # 4. Forçar o OpenSSL a compilar o próprio código estático para o Android
-        # Isso contorna o problema de não achar o pacote no host do GitHub Actions
-        export OPENSSL_STATIC=1
-        export OPENSSL_DIR="" # Limpa qualquer lixo do host
-        export CARGO_FEATURE_VENDORED=1
-        export OPENSSL_NO_VENDOR=0
+        # 4. A trava de segurança: Impedir que ele tente procurar no Ubuntu hospedeiro
+        export OPENSSL_NO_PKG_CONFIG=1
         
-        # 5. Mandar o Cargo buildar com as flags de ambiente
+        # 5. O build final
         cargo build --release --target aarch64-linux-android --workspace
         
     - name: Fazer Upload do Binário
