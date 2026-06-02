@@ -6,7 +6,7 @@ pub struct Def;
 
 impl Command for Def {
     fn name(&self) -> &str {
-        "def"
+        "fn"
     }
 
     fn description(&self) -> &str {
@@ -14,7 +14,7 @@ impl Command for Def {
     }
 
     fn signature(&self) -> nu_protocol::Signature {
-        Signature::build("def")
+        Signature::build("fn")
             .input_output_types(vec![(Type::Nothing, Type::Nothing)])
             .required("def_name", SyntaxShape::String, "The command name to define.")
             .required("params", SyntaxShape::Signature, "The command parameters, a comma-separated list inside [].")
