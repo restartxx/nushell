@@ -33,28 +33,41 @@ jobs:
 
     - name: Compilar o Nushell Customizado
       run: |
-        # 1. Capturar a pasta de binários do NDK e jogar no PATH do Ubuntu
+        # 1. PATH e Symlinks do NDK (A mágica do OpenSSL continua aqui)
         TOOLCHAIN_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
         export PATH=$TOOLCHAIN_BIN:$PATH
         
-        # 2. Criar symlinks (atalhos) para enganar os scripts de C que procuram o compilador genérico
         ln -sf $TOOLCHAIN_BIN/aarch64-linux-android24-clang $TOOLCHAIN_BIN/aarch64-linux-android-clang
         ln -sf $TOOLCHAIN_BIN/aarch64-linux-android24-clang++ $TOOLCHAIN_BIN/aarch64-linux-android-clang++
         
-        # 3. Avisar ao Cargo para usar as ferramentas genéricas (que agora apontam pro Android 24)
         export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-clang
         export CC_aarch64_linux_android=aarch64-linux-android-clang
         export CXX_aarch64_linux_android=aarch64-linux-android-clang++
         export AR_aarch64_linux_android=llvm-ar
         export RANLIB_aarch64_linux_android=llvm-ranlib
-        
-        # 4. Salvar o Makefile do OpenSSL forçando-o a usar o AR e RANLIB do Android
         export CC=aarch64-linux-android-clang
         export CXX=aarch64-linux-android-clang++
         export AR=llvm-ar
         export RANLIB=llvm-ranlib
         
-        # 5. Build Final! (Agora o OpenSSL não tem como escapar)
+        # 2. O Hack Bionic: Criando funções falsas para o Linker do Android
+        cat <<EOF > dummy_bionic.c
+        void setpwent(void) {}
+        void endpwent(void) {}
+        void* getpwent(void) { return 0; }
+        // Adicionando as de grupo também por precaução, já que o sysinfo pode pedir
+        void setgrent(void) {}
+        void endgrent(void) {}
+        void* getgrent(void) { return 0; }
+        EOF
+        
+        # 3. Compilamos esse C fajuto com o compilador do Android num arquivo objeto (.o)
+        aarch64-linux-android-clang -c dummy_bionic.c -o dummy_bionic.o
+        
+        # 4. Injetamos o arquivo objeto fajuto no Linker do Rust via RUSTFLAGS!
+        export RUSTFLAGS="-C link-arg=$(pwd)/dummy_bionic.o"
+        
+        # 5. Build Final! (Agora passa e cospe o binário!)
         cargo build --release --target aarch64-linux-android --workspace
         
     - name: Fazer Upload do Binário
