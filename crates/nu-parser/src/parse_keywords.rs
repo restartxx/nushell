@@ -197,7 +197,7 @@ pub fn parse_def_predecl(working_set: &mut StateWorkingSet, spans: &[Span]) {
         return;
     };
 
-    if def_type_name != b"def" && def_type_name != b"extern" {
+    if def_type_name != b"fn" && def_type_name != b"extern" {
         return;
     }
 
@@ -250,7 +250,7 @@ pub fn parse_def_predecl(working_set: &mut StateWorkingSet, spans: &[Span]) {
     let mut allow_unknown_args = false;
 
     for span in spans {
-        if working_set.get_span_contents(*span) == b"--wrapped" && def_type_name == b"def" {
+        if working_set.get_span_contents(*span) == b"--wrapped" && def_type_name == b"fn" {
             allow_unknown_args = true;
         }
     }
