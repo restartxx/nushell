@@ -6,7 +6,7 @@ pub struct ExportDef;
 
 impl Command for ExportDef {
     fn name(&self) -> &str {
-        "export def"
+        "export fn"
     }
 
     fn description(&self) -> &str {
@@ -14,7 +14,7 @@ impl Command for ExportDef {
     }
 
     fn signature(&self) -> nu_protocol::Signature {
-        Signature::build("export def")
+        Signature::build("export fn")
             .input_output_types(vec![(Type::Nothing, Type::Nothing)])
             .required("def_name", SyntaxShape::String, "Command name to define.")
             .required("params", SyntaxShape::Signature, "Command parameters: comma-separated list inside [].")
@@ -46,7 +46,7 @@ impl Command for ExportDef {
     fn examples(&self) -> Vec<Example<'_>> {
         vec![Example {
             description: "Define a custom command in a module and call it.",
-            example: r#"module spam { export def foo [] { "foo" } }; use spam foo; foo"#,
+            example: r#"module spam { export fn foo [] { "foo" } }; use spam foo; foo"#,
             result: Some(Value::test_string("foo")),
         }]
     }
