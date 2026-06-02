@@ -733,7 +733,7 @@ fn parse_def_inner(
                 working_set.error(ParseError::MissingPositional(
                     "...rest-like positional argument".to_string(),
                     name_expr.span,
-                    "def --wrapped must have a ...rest-like positional argument. \
+                    "fn --wrapped must have a ...rest-like positional argument. \
                             Add '...rest: string' to the command's signature."
                         .to_string(),
                 ));
