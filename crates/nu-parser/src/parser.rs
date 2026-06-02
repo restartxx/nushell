@@ -6437,7 +6437,7 @@ pub fn parse_expression(working_set: &mut StateWorkingSet, spans: &[Span]) -> Ex
 
         // For now, check for special parses of certain keywords
         match bytes.as_slice() {
-            b"def" | b"extern" | b"for" | b"module" | b"use" | b"source" | b"alias" | b"export"
+            b"fn" | b"extern" | b"for" | b"module" | b"use" | b"source" | b"alias" | b"export"
             | b"export-env" | b"hide" => {
                 working_set.error(ParseError::BuiltinCommandInPipeline(
                     String::from_utf8(bytes)
@@ -6591,7 +6591,7 @@ pub fn parse_builtin_commands(
 
     match name {
         // `parse_def` and `parse_extern` work both with and without attributes
-        b"def" => parse_def(working_set, lite_command, None).0,
+        b"fn" => parse_def(working_set, lite_command, None).0,
         b"extern" => parse_extern(working_set, lite_command, None),
         // `parse_export_in_block` also handles attributes by itself
         b"export" => parse_export_in_block(working_set, lite_command),
