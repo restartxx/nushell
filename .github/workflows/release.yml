@@ -33,24 +33,28 @@ jobs:
 
     - name: Compilar o Nushell Customizado
       run: |
-        # 1. Caminhos base do Android NDK
-        TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+        # 1. Capturar a pasta de binários do NDK e jogar no PATH do Ubuntu
+        TOOLCHAIN_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
+        export PATH=$TOOLCHAIN_BIN:$PATH
         
-        # 2. Compiladores C/C++ corretos do NDK (API 24 do Android/Termux)
-        export CC_aarch64_linux_android=$TOOLCHAIN/bin/aarch64-linux-android24-clang
-        export CXX_aarch64_linux_android=$TOOLCHAIN/bin/aarch64-linux-android24-clang++
-        export CC=$TOOLCHAIN/bin/aarch64-linux-android24-clang
-        export CXX=$TOOLCHAIN/bin/aarch64-linux-android24-clang++
+        # 2. Criar symlinks (atalhos) para enganar os scripts de C que procuram o compilador genérico
+        ln -sf $TOOLCHAIN_BIN/aarch64-linux-android24-clang $TOOLCHAIN_BIN/aarch64-linux-android-clang
+        ln -sf $TOOLCHAIN_BIN/aarch64-linux-android24-clang++ $TOOLCHAIN_BIN/aarch64-linux-android-clang++
         
-        # 3. Linker e Arquivador para o Cargo e Crates -sys
-        export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN/bin/aarch64-linux-android24-clang
-        export AR_aarch64_linux_android=$TOOLCHAIN/bin/llvm-ar
-        export AR=$TOOLCHAIN/bin/llvm-ar
+        # 3. Avisar ao Cargo para usar as ferramentas genéricas (que agora apontam pro Android 24)
+        export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android-clang
+        export CC_aarch64_linux_android=aarch64-linux-android-clang
+        export CXX_aarch64_linux_android=aarch64-linux-android-clang++
+        export AR_aarch64_linux_android=llvm-ar
+        export RANLIB_aarch64_linux_android=llvm-ranlib
         
-        # 4. A trava de segurança: Impedir que ele tente procurar no Ubuntu hospedeiro
-        export OPENSSL_NO_PKG_CONFIG=1
+        # 4. Salvar o Makefile do OpenSSL forçando-o a usar o AR e RANLIB do Android
+        export CC=aarch64-linux-android-clang
+        export CXX=aarch64-linux-android-clang++
+        export AR=llvm-ar
+        export RANLIB=llvm-ranlib
         
-        # 5. O build final
+        # 5. Build Final! (Agora o OpenSSL não tem como escapar)
         cargo build --release --target aarch64-linux-android --workspace
         
     - name: Fazer Upload do Binário
