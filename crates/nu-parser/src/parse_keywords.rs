@@ -1933,7 +1933,7 @@ pub fn parse_module_block(
 
             match name {
                 // `parse_def` and `parse_extern` work both with and without attributes
-                b"def" => {
+                b"fn" => {
                     block.pipelines.push(
                         parse_def(
                             working_set,
@@ -3999,7 +3999,7 @@ fn find_main_block_id_in_script(
             return None;
         };
         let decl_name = working_set.get_decl(call.decl_id).name();
-        if decl_name != "def" && decl_name != "export def" {
+        if decl_name != "fn" && decl_name != "export fn" {
             return None;
         }
 
