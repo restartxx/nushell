@@ -1,12 +1,24 @@
-name: Build Termux Fn-Edition
+name: Build Multi-Platform Fn-Edition
 
 on:
   workflow_dispatch: # Permite que você clique num botão no GitHub para buildar quando quiser
 
 jobs:
-  build-termux:
-    name: Build para Android (Termux)
+  build:
+    name: Build para ${{ matrix.name }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-linux-android
+            name: Termux-Android
+            artifact_name: nu-fn-termux
+          - target: aarch64-unknown-linux-gnu
+            name: Linux-ARM64-VM
+            artifact_name: nu-fn-linux-arm64
+          - target: x86_64-unknown-linux-gnu
+            name: Linux-x86_64-PC
+            artifact_name: nu-fn-linux-x64
 
     steps:
     - name: Checkout do código
@@ -14,31 +26,38 @@ jobs:
 
     - name: Configurar o Target no Rust
       run: |
-        echo "targets = ['aarch64-linux-android']" >> rust-toolchain.toml
+        echo "targets = ['${{ matrix.target }}']" >> rust-toolchain.toml
 
     - name: Setup Rust Toolchain
       uses: actions-rust-lang/setup-rust-toolchain@v1.12.0
       with:
-        cache: true # Ativa o cache para os próximos builds irem voando
+        cache: true # O cache do Cargo vai trabalhar de forma isolada para cada plataforma da matriz
 
-    - name: Setup Android NDK
+    - name: Instalar Compilador Cross (Apenas para VM ARM64)
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+    - name: Setup Android NDK (Apenas para Termux)
+      if: matrix.target == 'aarch64-linux-android'
       uses: nttld/setup-ndk@v1
       with:
-        ndk-version: r26b # Versão estável do NDK com suporte ao LLVM/Clang
+        ndk-version: r26b
 
     - name: Injetar OpenSSL Estático (Vendored) no Manifesto
       run: |
-        # Isso força o Cargo a unificar a dependência e baixar o código-fonte C do OpenSSL
+        # Isso garante o OpenSSL compilado direto do código-fonte para todas as plataformas, evitando quebra de libs dinâmicas
         cargo add openssl --features vendored
         
     - name: Converter nu-std de 'def' para 'fn'
       run: |
-        # Varre a pasta da biblioteca padrão e troca a palavra exata 'def' por 'fn'
         find crates/nu-std/ -type f -name "*.nu" -exec sed -i 's/\bdef\b/fn/g' {} +
-        
-    - name: Compilar o Nushell Customizado
+
+    # --- FLUXO DE COMPILAÇÃO 1: ANDROID/TERMUX ---
+    - name: Compilar o Nushell para Termux
+      if: matrix.target == 'aarch64-linux-android'
       run: |
-        # 1. PATH e Symlinks do NDK (A mágica do OpenSSL continua aqui)
         TOOLCHAIN_BIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin
         export PATH=$TOOLCHAIN_BIN:$PATH
         
@@ -55,28 +74,39 @@ jobs:
         export AR=llvm-ar
         export RANLIB=llvm-ranlib
         
-        # 2. O Hack Bionic: Criando funções falsas para o Linker do Android
         cat <<EOF > dummy_bionic.c
         void setpwent(void) {}
         void endpwent(void) {}
         void* getpwent(void) { return 0; }
-        // Adicionando as de grupo também por precaução, já que o sysinfo pode pedir
         void setgrent(void) {}
         void endgrent(void) {}
         void* getgrent(void) { return 0; }
         EOF
         
-        # 3. Compilamos esse C fajuto com o compilador do Android num arquivo objeto (.o)
         aarch64-linux-android-clang -c dummy_bionic.c -o dummy_bionic.o
-        
-        # 4. Injetamos o arquivo objeto fajuto no Linker do Rust via RUSTFLAGS!
         export RUSTFLAGS="-C link-arg=$(pwd)/dummy_bionic.o"
         
-        # 5. Build Final! (Agora passa e cospe o binário!)
         cargo build --release --target aarch64-linux-android --workspace
+
+    # --- FLUXO DE COMPILAÇÃO 2: LINUX ARM64 (VM) ---
+    - name: Compilar o Nushell para Linux ARM64
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+        export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+        export CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
         
+        cargo build --release --target aarch64-unknown-linux-gnu --workspace
+
+    # --- FLUXO DE COMPILAÇÃO 3: LINUX x86_64 (PC) ---
+    - name: Compilar o Nushell para Linux x86_64
+      if: matrix.target == 'x86_64-unknown-linux-gnu'
+      run: |
+        cargo build --release --target x86_64-unknown-linux-gnu --workspace
+        
+    # --- ARTIFACT UPLOAD GLOBAL ---
     - name: Fazer Upload do Binário
       uses: actions/upload-artifact@v4
       with:
-        name: nu-fn-termux
-        path: target/aarch64-linux-android/release/nu
+        name: ${{ matrix.artifact_name }}
+        path: target/${{ matrix.target }}/release/nu
