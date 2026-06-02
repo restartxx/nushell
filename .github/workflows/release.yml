@@ -28,12 +28,25 @@ jobs:
 
     - name: Compilar o Nushell Customizado
       run: |
-        # Configura as variáveis de ambiente para o Cargo saber onde está o Linker do Android
-        export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
+        # 1. Definir caminhos base do Android NDK injetado pela action 'nttld/setup-ndk'
+        TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
         
-        # Builda o workspace inteiro em modo Release focado no Termux
-        cargo build --release --target aarch64-linux-android --workspace
+        # 2. Configurar os compiladores C/C++ corretos do NDK (Mirando API 24 do Android/Termux)
+        export CC=$TOOLCHAIN/bin/aarch64-linux-android24-clang
+        export CXX=$TOOLCHAIN/bin/aarch64-linux-android24-clang++
+        
+        # 3. Ensinar o Cargo a encontrar o Linker e o Arquivador (crucial para crates -sys)
+        export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN/bin/aarch64-linux-android24-clang
+        export AR=$TOOLCHAIN/bin/llvm-ar
+        
+        # 4. Variáveis específicas para o build do CMake interno do aws-lc-sys
+        export CMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake
+        export ANDROID_ABI=arm64-v8a
+        export ANDROID_PLATFORM=android-24
 
+        # 5. Mandar o Cargo buildar o Workspace com as flags injetadas
+        cargo build --release --target aarch64-linux-android --workspace
+        
     - name: Fazer Upload do Binário
       uses: actions/upload-artifact@v4
       with:
