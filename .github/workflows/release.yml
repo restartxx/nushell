@@ -30,7 +30,12 @@ jobs:
       run: |
         # Isso força o Cargo a unificar a dependência e baixar o código-fonte C do OpenSSL
         cargo add openssl --features vendored
-
+        
+    - name: Converter nu-std de 'def' para 'fn'
+      run: |
+        # Varre a pasta da biblioteca padrão e troca a palavra exata 'def' por 'fn'
+        find crates/nu-std/ -type f -name "*.nu" -exec sed -i 's/\bdef\b/fn/g' {} +
+        
     - name: Compilar o Nushell Customizado
       run: |
         # 1. PATH e Symlinks do NDK (A mágica do OpenSSL continua aqui)
