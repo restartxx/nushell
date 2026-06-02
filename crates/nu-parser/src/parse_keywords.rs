@@ -580,15 +580,15 @@ fn parse_def_inner(
         };
 
     let def_call = working_set.get_span_contents(name_span);
-    if def_call != b"def" {
+    if def_call != b"fn" {
         working_set.error(ParseError::UnknownState(
-            "internal error: Wrong call name for def function".into(),
+            "internal error: Wrong call name for fn function".into(),
             Span::concat(spans),
         ));
         return garbage_result(working_set);
     }
     if let Some(redirection) = lite_command.redirection.as_ref() {
-        working_set.error(redirecting_builtin_error("def", redirection));
+        working_set.error(redirecting_builtin_error("fn", redirection));
         return garbage_result(working_set);
     }
 
