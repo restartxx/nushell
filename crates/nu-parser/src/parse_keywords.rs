@@ -1562,7 +1562,7 @@ pub fn parse_export_in_module(
         let kw_name = working_set.get_span_contents(*kw_span);
         match kw_name {
             // `parse_def` and `parse_extern` work both with and without attributes
-            b"def" => {
+            b"fn" => {
                 let (mut pipeline, cmd_result) =
                     parse_def(working_set, lite_command, Some(module_name));
 
@@ -1576,7 +1576,7 @@ pub fn parse_export_in_module(
                 }
 
                 // Trying to warp the 'def' call into the 'export def' in a very clumsy way
-                if !warp_export_call(working_set, &mut pipeline, "export def", spans) {
+                if !warp_export_call(working_set, &mut pipeline, "export fn", spans) {
                     return (garbage_pipeline(working_set, spans), vec![]);
                 }
 
@@ -2066,7 +2066,7 @@ pub fn parse_module_block(
                 }
                 _ => {
                     working_set.error(ParseError::ExpectedKeyword(
-                        "def, const, extern, alias, use, module, export or export-env keyword"
+                        "fn, const, extern, alias, use, module, export or export-env keyword"
                             .into(),
                         command.parts[0],
                     ));
