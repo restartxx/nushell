@@ -1461,7 +1461,7 @@ pub fn parse_export_in_block(
         let sub = working_set.get_span_contents(parts[1]);
         match sub {
             b"alias" => "export alias",
-            b"def" => "export def",
+            b"fn" => "export fn",
             b"extern" => "export extern",
             b"use" => "export use",
             b"module" => "export module",
@@ -1479,7 +1479,7 @@ pub fn parse_export_in_block(
 
     let mut pipeline = match full_name {
         // `parse_def` and `parse_extern` work both with and without attributes
-        "export def" => parse_def(working_set, lite_command, None).0,
+        "export fn" => parse_def(working_set, lite_command, None).0,
         "export extern" => parse_extern(working_set, lite_command, None),
         // Other definitions can't have attributes, so we handle attributes here with parse_attribute_block
         _ if lite_command.has_attributes() => parse_attribute_block(working_set, lite_command),
