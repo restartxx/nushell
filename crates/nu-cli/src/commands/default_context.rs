@@ -1,4 +1,5 @@
 use crate::commands::*;
+use crate::Println;
 use nu_protocol::engine::{EngineState, StateWorkingSet};
 
 pub fn add_cli_context(mut engine_state: EngineState) -> EngineState {
@@ -24,6 +25,7 @@ pub fn add_cli_context(mut engine_state: EngineState) -> EngineState {
             KeybindingsDefault,
             KeybindingsList,
             KeybindingsListen,
+            Println,
         };
 
         #[cfg(feature = "sqlite")]
