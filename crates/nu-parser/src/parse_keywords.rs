@@ -3241,6 +3241,12 @@ pub fn parse_overlay_hide(working_set: &mut StateWorkingSet, call: Box<Call>) ->
 pub fn parse_let(working_set: &mut StateWorkingSet, spans: &[Span]) -> Pipeline {
     trace!("parsing: let");
 
+    if spans.len() > 1 && working_set.get_span_contents(spans[1]) == b"mut" {
+        // Se for "mut", nós "fatiamos" os spans ignorando o spans[0] (que é o "let")
+        // e repassamos o resto do comando direto para a função parse_mut
+        return parse_mut(working_set, &spans[1..]);
+    }
+
     // JT: Disabling check_name because it doesn't work with optional types in the declaration
     // if let Some(span) = check_name(working_set, spans) {
     //     return Pipeline::from_vec(vec![garbage(*span)]);
